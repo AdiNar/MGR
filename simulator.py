@@ -1,6 +1,10 @@
+import heapq
 from collections import Iterable
+from decimal import Decimal
 from enum import Enum, auto
 from typing import List
+
+import IntervalTree as IntervalTree
 
 
 class JobState(Enum):
@@ -159,3 +163,18 @@ class Schedule:
 
     def get_machines(self):
         raise NotImplementedError
+
+
+class Scheduler:
+    def __init__(self, instance, schedule):
+        self.instance = instance
+        self.schedule = schedule
+
+    def _run(self, start_at=0):
+        pass
+
+    def run(self, start_at=0) -> Schedule:
+        self._run(start_at=start_at)
+
+        assert not self.instance.jobs.not_scheduled()
+        return self.schedule
