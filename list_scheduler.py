@@ -17,9 +17,9 @@ class ListScheduler(Scheduler):
         org_jobs = schedule.jobs_running_after(start_at).jobs
         running_jobs = list()
 
-        for j in sorted(org_jobs, key=lambda x: x.scheduled_at):
-            if j.scheduled_at < start_at:
-                running_jobs.append(Job(j.scheduled_at - start_at + j.p, j.r))
+        for j in sorted(org_jobs, key=lambda x: x.S):
+            if j.S < start_at:
+                running_jobs.append(Job(j.S - start_at + j.p, j.r))
             else:
                 running_jobs.append(Job(j.p, j.r))
 
