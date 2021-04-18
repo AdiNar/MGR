@@ -1,10 +1,15 @@
 import heapq
-from collections import Iterable
 from decimal import Decimal
 from enum import Enum, auto
-from typing import List
+from typing import List, Tuple, Iterable
+from collections import defaultdict
+from time import time
 
-import IntervalTree as IntervalTree
+import numpy as np
+
+from intervaltree import IntervalTree
+
+from distribution import SimulationInput
 
 
 class JobState(Enum):
@@ -19,15 +24,21 @@ class Job:
         self.r = resource
         self.state = JobState.NOT_SCHEDULED
         self.scheduled_at = None
+        self.machine = None
+        self.schedule_obj = None
 
         assert length > 0
         assert 0 <= resource <= 1
 
-    def schedule(self, t):
+    def schedule(self, t, m, schedule_obj):
         self.scheduled_at = t
+        self.machine = m
         self.state = JobState.SCHEDULED
+        self.schedule_obj = schedule_obj
 
     def unschedule(self):
+        if self.schedule_obj:
+            self.schedule_obj.unschedule(self)
         self.state = JobState.NOT_SCHEDULED
         self.scheduled_at = None
 
@@ -59,6 +70,17 @@ class Job:
 
     def __repr__(self):
         return self.__str__()
+
+    def __lt__(self, other):
+        if other is None:
+            return False
+        return id(self) < id(other)
+
+    def __eq__(self, other):
+        return id(self) == id(other)
+
+    def __hash__(self):
+        return id(self)
 
 
 class JobSet:
@@ -120,6 +142,8 @@ class Instance:
         self.jobs = jobs
         self.machines_count = machines_count
 
+    def reset(self):
+        self.jobs.unschedule()
 
 class Machine:
     def __init__(self, i):
@@ -191,6 +215,7 @@ class IntervalTreeSchedule(Schedule):
         super().__init__(machines_count)
         self.tree = IntervalTree()
         self.action_points = set()
+        self.resource_cautious_schedule = ResourceCautiousSchedule(self)
 
     def schedule(self, j: Job, t: 'Schedule.TimeType', m: Machine = None, check_for_machine = True):
         if check_for_machine and len(self.tree.at(t)) == self.machines_count:
@@ -198,9 +223,16 @@ class IntervalTreeSchedule(Schedule):
 
         self.action_points.add(t + j.p)
         self.tree.addi(t, t + j.p, data=j)
-        j.schedule(t)
+        j.schedule(t, m, self)
 
         return True
+
+    def LPT(self, jobs: JobSet, start_from: float = 0):
+        free_machine_at = [start_from for _ in range(self.machines_count)]
+        for j in jobs.by_length_descending():
+            t = heapq.heappop(free_machine_at)
+            self.schedule(j, t)
+            heapq.heappush(free_machine_at, t + j.p)
 
     def resources_consumption_at(self, t: 'Schedule.TimeType') -> float:
         return sum(i.data.r for i in self.tree.at(t))
@@ -332,7 +364,7 @@ class IntervalTreeSchedule(Schedule):
         raise RuntimeError("Should never reach that moment")
 
     def get_machine_by_number(self, machine_nr):
-        return machine_nr  # Machines
+        return machine_nr
 
     def filter(self, fun):
         return JobSet([j for j in self.tree if fun(j)])
@@ -343,10 +375,18 @@ class IntervalTreeSchedule(Schedule):
     def unschedule(self, j: Job):
         self.tree.removei(j.S, j.C, j)
 
+    def get_resource_consumption_array(self):
+        self.resource_cautious_schedule.get_resource_consumption_array()
+
+    def fit_in_first_place(self, j):
+        self.resource_cautious_schedule.fit_in_first_place(j)
+
 
 class Scheduler:
-    def __init__(self, instance, schedule):
+    def __init__(self, instance, schedule=None):
         self.instance = instance
+        if not schedule:
+            schedule = IntervalTreeSchedule(self.instance.machines_count)
         self.schedule = schedule
 
     def _run(self, start_at=0):
@@ -355,5 +395,295 @@ class Scheduler:
     def run(self, start_at=0) -> Schedule:
         self._run(start_at=start_at)
 
-        assert not self.instance.jobs.not_scheduled()
+        assert not self.instance.jobs.not_scheduled_jobs()
         return self.schedule
+
+
+class LinkedList:
+    def __init__(self, t, val, refs):
+        assert refs >= 0
+        self.t = t
+        self.val = val
+        self.refs = refs
+        self.nxt = None
+        self.prev = None
+
+    def incr(self):
+        self.refs += 1
+
+    def decr(self):
+        assert self.refs > 0
+        self.refs -= 1
+
+    def insert_after(self, el: 'LinkedList'):
+        el.nxt = self.nxt
+        el.prev = self
+
+        if self.nxt:
+            self.nxt.prev = el
+        self.nxt = el
+
+    def insert_before(self, el: 'LinkedList'):
+        el.nxt = self
+        el.prev = self.prev
+        self.prev.nxt = el  # we won't try to insert before 0
+        self.prev = el
+
+    def find(self, t):
+        el = self
+        while el.t < t:
+            el = el.nxt
+        return el
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.nxt is None:
+            raise StopIteration
+        return self.nxt
+
+    def __str__(self):
+        return f'{self.t:.2f}: {self.val:.2f}'
+
+
+class ResourceCautiousSchedule:
+    def __init__(self, schedule):
+        self.schedule = schedule
+        self.machines_count = schedule.machines_count
+        self.action_points = set()
+        self.action_points_list_map = {}
+
+    def get_resource_consumption_array(self):
+        self.init_action_points()
+
+        tmp_array = len(self.action_points) * [Decimal(0)]
+        mach_count = len(tmp_array) * [0]
+        sorted_action_points = sorted(self.action_points)
+
+        action_point_id = {ap : i for i, ap in enumerate(sorted_action_points)}
+
+        for s, e, j in self.schedule.tree:
+            tmp_array[action_point_id[s]] += Decimal(j.r)
+            mach_count[action_point_id[s]] += 1
+            tmp_array[action_point_id[e]] -= Decimal(j.r)
+            mach_count[action_point_id[e]] -= 1
+
+        list_head = None
+        last_val = Decimal(0)
+        machines = 0
+        for i, (p, mc) in enumerate(zip(tmp_array, mach_count)):
+            last_val += p
+            machines += mc
+            assert last_val <= 1
+            ll = LinkedList(sorted_action_points[i], last_val, machines)
+            self.action_points_list_map[i] = ll
+
+            if list_head:
+                list_head.insert_after(ll)
+            list_head = ll
+
+    def init_action_points(self):
+        for s, e, j in self.schedule.tree:
+            self.action_points.add(s)
+            self.action_points.add(e)
+
+    def fit_in_first_place(self, j: Job):
+        head = self.action_points_list_map[0]
+
+        self.unschedule_job_from_list(head, j)
+
+        head, tail = self._find_first_fit(head, j)
+
+        self.schedule.schedule(j, head.t)
+
+        while head != tail:
+            head.val += Decimal(j.r)
+            head.incr()
+            if head.refs > self.machines_count:
+                raise RuntimeError
+            head = head.nxt
+
+        if tail.t != j.C:
+            assert tail.t > j.C
+            tail.insert_before(LinkedList(j.C, tail.prev.val, tail.prev.refs))
+
+        return head
+
+    def _find_first_fit(self, head, j):
+        tail = head
+        while tail and head.t + j.p > tail.t:
+            if tail.val > 1 - j.r or tail.refs == self.machines_count:
+                head = tail.nxt
+                tail = head
+                continue
+
+            tail = tail.nxt
+
+        assert tail
+        return head, tail
+
+    def unschedule_job_from_list(self, head, j):
+        job_head = head.find(j.scheduled_at)
+        while job_head.t != j.C:
+            job_head.val -= Decimal(j.r)
+            job_head.decr()
+            job_head = job_head.nxt
+        j.unschedule()
+
+
+def get_instance(simulation_input: SimulationInput, m, n):
+    generate = True
+    while generate:
+        simulation_input.prepare(n, m)
+        jobs = JobSet([Job(*simulation_input()) for _ in range(n)])
+        instance = Instance(jobs, m)
+        bounds = [(instance.jobs.vol_bound(m), 'VOL OPT'), (instance.jobs.res_bound(), 'RES OPT'),
+                  (instance.jobs.job_length_bound(), 'MAX OPT')]
+        generate = bounds[2] > max(bounds[0], bounds[1])
+
+    ref = max(bounds)
+    return [ref[0]], [ref[1]], ref[0], instance
+
+
+class BoxBuilder:
+    def __init__(self):
+        self.row_length = None
+        self.content = ''
+        self.row_content = []
+        self.row_title = ''
+        self.titles = []
+        self.results = defaultdict(list)
+
+    def start(self):
+        pass
+
+    def start_row(self, title, row_length):
+        self.row_content = []
+        self.row_title = title
+        self.row_length = row_length
+        self.content = ''''''
+
+    def end_row(self):
+        for box in self.row_content:
+            self.content += box
+        pass
+
+    def end(self):
+        return self.content
+
+    def add_title(self, title):
+        self.titles.append(title)
+
+    def add_result(self, title, times):
+        if title not in self.titles:
+            self.titles.append(title)
+        self.results[title].append(float(times))
+
+    def add_boxplot(self):
+        boxes = []
+        times_list = []
+
+        for title in self.titles:
+            times_list.append(self.results[title])
+
+        for times in times_list:
+            if not times:
+                continue
+            times = np.array(times)
+            min = np.min(times)
+            p25 = np.percentile(times, 25)
+            mean = np.mean(times)
+            p75 = np.percentile(times, 75)
+            max = np.max(times)
+
+            boxes.append(f"""\\addplot+[
+            boxplot prepared={{
+              median={mean},
+              upper quartile={p75},
+              lower quartile={p25},
+              upper whisker={max},
+              lower whisker={min}
+            }},
+            ] coordinates {{}};""")
+
+        self.row_content.append(f"""
+    \\begin{{tikzpicture}}
+      \\begin{{axis}}
+        [
+        boxplot/draw direction = y,
+        xticklabel style = {{align=center, font=\small, rotate=60}},
+        xtick={{{', '.join([str(i + 1) for i, _ in enumerate(self.titles)])}}},
+        xticklabels={{{','.join(self.titles)}}},
+        ]
+        {' '.join(boxes)}
+      \\end{{axis}}
+    \\end{{tikzpicture}}""")
+
+        self.results.clear()
+        self.title = []
+
+
+class SimulationRunner:
+    def __init__(self, algorithms: List[Tuple[Schedule, str]], simulation_input: SimulationInput,
+                 params: List[Tuple[int, int]],
+                 reps: int, display: bool):
+        self.algorithms = algorithms
+        self.simulation_input = simulation_input
+        self.params = params
+        self.reps = reps
+        self.display = display
+        self.approx_boxplot = BoxBuilder()
+        self.time_boxplot = BoxBuilder()
+
+    def handle_input(self, args):
+        alg, name, inp = args
+        bounds, bounds_titles, ref, instance = inp
+
+        t = time()
+        schedule = alg(instance).run()
+
+        schedule.get_machines()
+
+        runtime = time() - t
+
+        approx = schedule.C_max() / ref
+        if approx < 1:
+            raise RuntimeError(f"{name} gave {approx} approx")
+        self.approx_boxplot.add_result(name, approx)
+        self.time_boxplot.add_result(name, runtime)
+        instance.reset()
+
+    def run(self):
+        total = self.reps * len(self.params) * len(self.algorithms)
+        cur = 0
+
+        schedules_graphic = []
+        self.time_boxplot.start_row('Runtime [s]', 2)
+
+        for n, m in self.params:
+            self.approx_boxplot.start_row(f'({n}, {m})', 2)
+            inputs = [get_instance(self.simulation_input, m=m, n=n) for _ in range(self.reps)]
+            for alg, name in self.algorithms:
+                for inp in inputs:
+                    print(f'Proceeding {name} {cur}/{total}')
+                    cur += 1
+                    self.handle_input((alg, name, inp))
+
+            for bounds, bounds_titles, ref, instance in inputs:
+                for bound, bound_title in zip(bounds, bounds_titles):
+                    self.approx_boxplot.add_result(bound_title, bound / ref)
+            self.approx_boxplot.add_boxplot()
+            self.time_boxplot.add_boxplot()
+
+            self.approx_boxplot.end_row()
+            approx_latex = self.approx_boxplot.end()
+            self.approx_boxplot.start_row('', 2)
+
+        self.time_boxplot.end_row()
+        time_latex = self.time_boxplot.end()
+        for name, slide in schedules_graphic:
+            time_latex += f'\n\n{name}'
+
+        print(f'Approximation factor:\n{approx_latex}')
+        print(f'Runtime [s]:\n{time_latex}')
