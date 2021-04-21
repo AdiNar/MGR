@@ -21,14 +21,13 @@ def run():
         (RAND, 'RAND')
     ]
 
-    input = Dist('logs_zapat')
+    simulation_input = Dist('logs_zapat')
 
     ns = [500, 1000, 5000, 10000]
     ms = [10, 20, 50, 100]
     params = [(n, m) for n in ns for m in ms]
 
-    SimulationRunner(algorithms=algorithms, simulation_input=input, params=params, reps=1,
-               display=False).run()
+    SimulationRunner(algorithms=algorithms, simulation_input=simulation_input, params=params, reps=30).run()
 
 
 if __name__ == '__main__':

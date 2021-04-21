@@ -627,12 +627,11 @@ class BoxBuilder:
 class SimulationRunner:
     def __init__(self, algorithms: List[Tuple[Schedule, str]], simulation_input: SimulationInput,
                  params: List[Tuple[int, int]],
-                 reps: int, display: bool):
+                 reps: int):
         self.algorithms = algorithms
         self.simulation_input = simulation_input
         self.params = params
         self.reps = reps
-        self.display = display
         self.approx_boxplot = BoxBuilder()
         self.time_boxplot = BoxBuilder()
 
