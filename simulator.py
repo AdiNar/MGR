@@ -651,7 +651,7 @@ class SimulationRunner:
 
     def run(self):
         total = self.reps * len(self.params) * len(self.algorithms)
-        cur = 0
+        cur = 1
 
         schedules_graphic = []
         self.time_boxplot.start_row('Runtime [s]', 2)
