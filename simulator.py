@@ -10,6 +10,7 @@ import numpy as np
 from intervaltree import IntervalTree
 
 from distribution import SimulationInput
+from utils import print_latex
 
 
 class JobState(Enum):
@@ -295,15 +296,8 @@ class IntervalTreeSchedule(Schedule):
         return last_value
 
     def schedule_jobs_with_infill_guarantee(self, threshold: float, jobs: JobSet, start_at=0):
-        heap = list(self.action_points)
-        heapq.heapify(heap)
+        heap = self.get_action_points_heap(start_at)
         t = start_at
-
-        while heap and heap[0] < t:
-            heapq.heappop(heap)
-
-        if not heap:
-            heap = [t]
 
         for j in jobs.by_resource_descending():
             t = self.first_moment_with_resource_consumption_less_than(threshold, heap)
@@ -313,28 +307,21 @@ class IntervalTreeSchedule(Schedule):
         return self.first_moment_with_resource_consumption_less_than(threshold, heap)
 
     def schedule_jobs_with_infill_guarantee_heuristic(self, threshold: float, jobs: JobSet, start_at=0):
-        heap = list(self.action_points)
-        heapq.heapify(heap)
+        heap = self.get_action_points_heap(start_at)
         t = start_at
-
-        while heap and heap[0] < t:
-            heapq.heappop(heap)
-
-        if not heap:
-            heap = [t]
 
         jobs_ordered = jobs.by_resource_ascending()
 
         while jobs_ordered:
             t = heapq.heappop(heap)
-            rr = self.resources_consumption_at(t)
+            rr = Decimal(self.resources_consumption_at(t))
             j = jobs_ordered[-1]
             jobs_at = len(self.tree.at(t))
 
-            while j and rr + j.r <= 1 and jobs_at < self.machines_count:
+            while j and rr + Decimal(j.r) <= 1 and jobs_at < self.machines_count:
                 self.schedule(j, t)
                 jobs_at += 1
-                rr += j.r
+                rr += Decimal(j.r)
                 jobs_ordered.pop()
                 heapq.heappush(heap, t + j.p)
                 if jobs_ordered:
@@ -350,10 +337,18 @@ class IntervalTreeSchedule(Schedule):
 
         return t
 
+    def get_action_points_heap(self, start_at=0):
+        heap = list(self.action_points)
+        heapq.heapify(heap)
+        while heap and heap[0] < start_at:
+            heapq.heappop(heap)
+        if not heap:
+            heap = [start_at]
+        return heap
+
     def first_moment_with_resource_consumption_less_than(self, threshold, heap=None) -> 'Schedule.TimeType':
         if heap is None:
-            heap = list(self.action_points)
-            heapq.heapify(heap)
+            heap = self.get_action_points_heap()
 
         while heap:
             t = heapq.heappop(heap)
@@ -627,13 +622,14 @@ class BoxBuilder:
 class SimulationRunner:
     def __init__(self, algorithms: List[Tuple[Schedule, str]], simulation_input: SimulationInput,
                  params: List[Tuple[int, int]],
-                 reps: int):
+                 reps: int, output_prefix: str):
         self.algorithms = algorithms
         self.simulation_input = simulation_input
         self.params = params
         self.reps = reps
         self.approx_boxplot = BoxBuilder()
         self.time_boxplot = BoxBuilder()
+        self.output_prefix = output_prefix
 
     def handle_input(self, args):
         alg, name, inp = args
@@ -684,5 +680,5 @@ class SimulationRunner:
         for name, slide in schedules_graphic:
             time_latex += f'\n\n{name}'
 
-        print(f'Approximation factor:\n{approx_latex}')
-        print(f'Runtime [s]:\n{time_latex}')
+        print_latex(approx_latex, filename=f'{self.output_prefix}_approx')
+        print_latex(time_latex, filename=f'{self.output_prefix}_runtime')

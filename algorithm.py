@@ -88,6 +88,9 @@ class ApAlgS(ApAlg):
 
 
 class ApAlgH(Scheduler):
+    def schedule_jobs_with_infill_guarantee(self, threshold, jobs, start_at=0):
+        return self.schedule.schedule_jobs_with_infill_guarantee_heuristic(threshold, jobs, start_at)
+
     def run(self, check_assertions=False):
         schedule, instance = self.schedule, self.instance
         jobs = instance.jobs
@@ -164,9 +167,6 @@ class ApAlgH(Scheduler):
                                  (t_lpt, 't_lpt')]
 
         return schedule
-
-    def schedule_jobs_with_infill_guarantee(self, threshold, jobs, start_at=0):
-        return self.schedule.schedule_jobs_with_infill_guarantee_heuristic(threshold, jobs, start_at)
 
     def get_last_gap_end(self):
         epsilon = 0

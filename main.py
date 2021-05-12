@@ -27,7 +27,8 @@ def run(args):
 
     params = [(n, m) for n in args.jobs for m in args.machines]
 
-    SimulationRunner(algorithms=algorithms, simulation_input=simulation_input, params=params, reps=args.reps).run()
+    SimulationRunner(algorithms=algorithms, simulation_input=simulation_input, params=params, reps=args.reps,
+                     output_prefix=args.output_prefix).run()
 
 
 if __name__ == '__main__':
@@ -45,6 +46,10 @@ if __name__ == '__main__':
     parser.add_argument('--jobs', type=int, nargs='+',
                         help='Space separated list of jobs number to test each algorithm on.',
                         default=[500, 1000, 5000, 10000])
+    parser.add_argument('--output-prefix', type=str,
+                        help='Prefix of the output files. Script will generate the following files:'
+                             '<output_prefix>_{approx,runtime}.{tex,pdf}', default='results')
+
     args = parser.parse_args()
 
     run(args)
