@@ -665,7 +665,7 @@ class SimulationRunner:
             inputs = [get_instance(self.simulation_input, m=m, n=n) for _ in range(self.reps)]
             for alg, name in self.algorithms:
                 for inp in inputs:
-                    print(f'Proceeding {name} {cur}/{total}')
+                    print(f'Proceeding {name} with params n={n}, m={m} {cur}/{total}')
                     cur += 1
                     self.handle_input((alg, name, inp))
 
