@@ -127,6 +127,8 @@ class ApAlgH(Scheduler):
         t_medium_guarantee = max(schedule.medium_guarantee(), t_first_cut)
 
         if C_heavy == t_first_cut:
+            # As we don't stop on 2/3 of the resource, we may schedule remaining light jobs earlier -
+            # at t_last_gap_end, along medium jobs
             t_second_cut = \
                 self.schedule_jobs_with_infill_guarantee(2 / 3,
                                                          jobs.filter(
