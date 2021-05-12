@@ -105,9 +105,9 @@ class ApAlgH(Scheduler):
 
             self.apply_heuristics(t_first_cut, C_heavy)
 
-            jobs.filter(lambda j: j.is_scheduled() and j.S >= t_first_cut and j.r <= 1 / 3).unschedule()
-            J_dirty_light = jobs.filter(lambda j: j.is_scheduled() and j.S <= t_first_cut < j.C and j.r <= 1 / 3)
+            J_dirty_light = jobs.filter(lambda j: j.is_scheduled() and j.S < t_first_cut < j.C and j.r <= 1 / 3)
             J_dirty_light.mark_dirty()
+            jobs.filter(lambda j: j.is_scheduled() and j.S >= t_first_cut and j.r <= 1 / 3).unschedule()
 
             if check_assertions:
                 if C_heavy == t_first_cut:
