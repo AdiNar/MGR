@@ -49,18 +49,18 @@ class ApAlg(Scheduler):
 
         if C_heavy == C_alg:
             if check_assertions:
-                assert jobs.not_scheduled().is_light_set(2 / 3, m)
-            J_lpt = J_dirty_light + jobs.not_scheduled()
+                assert jobs.not_scheduled_jobs().is_light_set(2 / 3, m)
+            J_lpt = J_dirty_light + jobs.not_scheduled_jobs()
         else:
             J_dirty = jobs.filter(lambda j: j.is_scheduled() and j.S <= t_second_cut < j.C)
             J_dirty.mark_dirty()
 
             if check_assertions:
                 if C_heavy == t_first_cut:
-                    assert (J_dirty + jobs.not_scheduled()).is_light_set(2 / 3, m)
+                    assert (J_dirty + jobs.not_scheduled_jobs()).is_light_set(2 / 3, m)
                 else:
                     assert J_dirty.is_light_set(1 / 2, m)
-                    assert jobs.not_scheduled().is_light_set(1 / 3, m)
+                    assert jobs.not_scheduled_jobs().is_light_set(1 / 3, m)
             J_lpt = J_dirty + J_dirty_light + jobs.not_scheduled_jobs()
 
         if check_assertions:
@@ -79,7 +79,7 @@ class ApAlgS(ApAlg):
     def run(self, check_assertions=False):
         schedule = super().run(check_assertions)
         schedule.get_resource_consumption_array()
-        jobs = sorted(self.instance.jobs.jobs, key=lambda x: (x.scheduled_at, x.p))
+        jobs = sorted(self.instance.jobs.jobs, key=lambda x: (x.S, x.p))
 
         for j in jobs:
             schedule.fit_in_first_place(j)
@@ -137,17 +137,17 @@ class ApAlgH(Scheduler):
         if C_heavy == C_alg:
             if check_assertions:
                 assert jobs.not_scheduled().is_light_set(2 / 3, m)
-            J_lpt = J_dirty_light + jobs.not_scheduled()
+            J_lpt = J_dirty_light + jobs.not_scheduled_jobs()
         else:
             J_dirty = jobs.filter(lambda j: j.is_scheduled() and j.S <= t_second_cut < j.C)
             J_dirty.mark_dirty()
 
             if check_assertions:
                 if C_heavy == t_first_cut:
-                    assert (J_dirty + jobs.not_scheduled()).is_light_set(2 / 3, m)
+                    assert (J_dirty + jobs.not_scheduled_jobs()).is_light_set(2 / 3, m)
                 else:
                     assert J_dirty.is_light_set(1 / 2, m)
-                    assert jobs.not_scheduled().is_light_set(1 / 3, m)
+                    assert jobs.not_scheduled_jobs().is_light_set(1 / 3, m)
             J_lpt = J_dirty + J_dirty_light + jobs.not_scheduled_jobs()
 
         if check_assertions:
