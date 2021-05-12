@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, help='Seed used to generate test instances. Defaults to current time.',
                         default=default_seed)
     parser.add_argument('--reps', type=int,
-                        help='Number of instances per number of machines, number of jobs pair every algorithm runs on.',
+                        help='Number of instances per <number of machines, number of jobs> pair every algorithm runs on.',
                         default=30)
     parser.add_argument('--machines', type=int, nargs='+',
                         help='Space separated list of machines number to test each algorithm on.',
