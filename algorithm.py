@@ -79,7 +79,7 @@ class ApAlgS(ApAlg):
     def run(self, check_assertions=False):
         schedule = super().run(check_assertions)
         schedule.get_resource_consumption_array()
-        jobs = sorted(self.instance.jobs.jobs, key=lambda x: (x.S, x.p))
+        jobs = sorted(self.instance.jobs.jobs, key=lambda x: x.S)
 
         for j in jobs:
             schedule.fit_in_first_place(j)
