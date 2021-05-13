@@ -680,5 +680,6 @@ class SimulationRunner:
         for name, slide in schedules_graphic:
             time_latex += f'\n\n{name}'
 
+        print('Generating latex files...')
         print_latex(approx_latex, filename=f'{self.output_prefix}_approx')
         print_latex(time_latex, filename=f'{self.output_prefix}_runtime')
