@@ -21,8 +21,9 @@ will run script with default parameters.
 
 Possible adjustments are:
 ```
-./main.py [-h] [--seed SEED] [--reps REPS] [--machines MACHINES [MACHINES ...]] [--jobs JOBS [JOBS ...]]
-          [--output-dir OUTPUT_DIR] [--check-assertions] [--algorithms ALGORITHMS [ALGORITHMS ...]]
+./main.py [-h] [--seed SEED] [--reps REPS] [--machines MACHINES [MACHINES ...]] 
+          [--jobs JOBS [JOBS ...]] [--output-dir OUTPUT_DIR] [--check-assertions] 
+          [--algorithms ALGORITHMS [ALGORITHMS ...]] [--outliers-percent OUTLIERS_PERCENT]
 
 ```
 Check `./main.py --help` for details.
