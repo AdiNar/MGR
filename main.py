@@ -50,8 +50,9 @@ def run(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Simulator for comparison between ApAlg variations and '
                                                  'benchmark consisting of list schedulers. '
-                                                 'Produces boxplot chart with makespans normalized by known '
-                                                 'lower bounds for optimal schedule length. ')
+                                                 'Produces boxplot charts with makespans normalized by known '
+                                                 'lower bounds for optimal schedule length. '
+                                                 'Also produces boxplots with algorithms running times.')
 
     default_seed = int(time())
     parser.add_argument('--seed', type=positive_int, help='Seed used to generate test instances. '
