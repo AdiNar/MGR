@@ -10,10 +10,14 @@ class ListScheduler(Scheduler):
     def _list_scheduler_run(self, m: int, jobs: List[Job], start_at=0):
         schedule = self.schedule
         action_points = [(start_at, 0, 0)]  # (time, machine, resources)
-        free_machines = set(range(1, m))  # Think of it as 'there was a virtual job that ended at 0 and we're starting now'
+
+        # 0 is not in the free_machines set.
+        # Think of it as if there was a virtual job scheduled on machine 0
+        # that ended at <start_at> and we're starting now.
+        free_machines = set(range(1, m))
         scheduled_jobs = set()
 
-        # First we provide already scheduled jobs, so that they are properly acknowledged by the algorithm
+        # First we handle already scheduled jobs, so that they are properly acknowledged by the algorithm
         org_jobs = schedule.jobs_running_after(start_at).jobs
         running_jobs = list()
 
