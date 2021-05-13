@@ -141,7 +141,7 @@ class ApAlgH(Scheduler):
 
         if C_heavy == C_alg:
             if check_assertions:
-                assert jobs.not_scheduled().is_light_set(2 / 3, m)
+                assert jobs.not_scheduled_jobs().is_light_set(2 / 3, m)
             J_lpt = J_dirty_light + jobs.not_scheduled_jobs()
         else:
             J_dirty = jobs.filter(lambda j: j.is_scheduled() and j.S <= t_second_cut < j.C)
@@ -163,10 +163,6 @@ class ApAlgH(Scheduler):
 
         for j in jobs.jobs:
             assert j.is_scheduled()
-
-        schedule.graphic_data = [(C_heavy, 'C_heavy'), (t_first_cut, 't_first_cut'),
-                                 (t_medium_guarantee, 't_medium_guarantee'), (t_second_cut, 't_second_cut'),
-                                 (t_lpt, 't_lpt')]
 
         return schedule
 
