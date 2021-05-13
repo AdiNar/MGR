@@ -411,6 +411,10 @@ class LinkedList:
         self.refs -= 1
 
     def insert_after(self, el: 'LinkedList'):
+        if self.nxt:
+            assert self.nxt.t >= el.t
+        assert self.t <= el.t
+
         el.nxt = self.nxt
         el.prev = self
 
@@ -419,12 +423,17 @@ class LinkedList:
         self.nxt = el
 
     def insert_before(self, el: 'LinkedList'):
+        if self.prev:
+            assert self.prev.t <= el.t
+        assert self.t >= el.t
+
         el.nxt = self
         el.prev = self.prev
         self.prev.nxt = el  # we won't try to insert before 0
         self.prev = el
 
     def find(self, t):
+        """List elements are ordered by `t`. While inserting, we want to keep that property."""
         el = self
         while el.t < t:
             el = el.nxt
@@ -443,6 +452,10 @@ class LinkedList:
 
 
 class ResourceCautiousSchedule:
+    """This class provides limited schedule functionality. It's goal is to ensure that jobs are feasibly scheduled,
+    i.e. resources are not exceeded on the whole time interval while they are processed.
+    As a contrary, `IntervalTreeSchedule` assumes that if resources are available at `t`, they will be available
+    at any `t' > t`."""
     def __init__(self, schedule):
         self.schedule = schedule
         self.machines_count = schedule.machines_count
@@ -543,28 +556,15 @@ def get_instance(simulation_input: SimulationInput, m, n):
 
 class BoxBuilder:
     def __init__(self):
-        self.row_length = None
         self.content = ''
-        self.row_content = []
-        self.row_title = ''
+        self.raw_content = []
         self.titles = []
         self.results = defaultdict(list)
 
-    def start(self):
-        pass
-
-    def start_row(self, title, row_length):
-        self.row_content = []
-        self.row_title = title
-        self.row_length = row_length
-        self.content = ''''''
-
-    def end_row(self):
-        for box in self.row_content:
-            self.content += box
-        pass
-
     def end(self):
+        for box in self.raw_content:
+            self.content += box
+
         return self.content
 
     def add_title(self, title):
@@ -602,7 +602,7 @@ class BoxBuilder:
             }},
             ] coordinates {{}};""")
 
-        self.row_content.append(f"""
+        self.raw_content.append(f"""
     \\begin{{tikzpicture}}
       \\begin{{axis}}
         [
@@ -616,20 +616,19 @@ class BoxBuilder:
     \\end{{tikzpicture}}""")
 
         self.results.clear()
-        self.title = []
 
 
 class SimulationRunner:
     def __init__(self, algorithms: List[Tuple[Schedule, str]], simulation_input: SimulationInput,
                  params: List[Tuple[int, int]],
-                 reps: int, output_prefix: str):
+                 reps: int, output_dir: str):
         self.algorithms = algorithms
         self.simulation_input = simulation_input
         self.params = params
         self.reps = reps
         self.approx_boxplot = BoxBuilder()
         self.time_boxplot = BoxBuilder()
-        self.output_prefix = output_prefix
+        self.output_dir = output_dir
 
     def handle_input(self, alg, name, inp, check_assertions):
         bounds, bounds_titles, ref, instance = inp
@@ -652,11 +651,7 @@ class SimulationRunner:
         total = self.reps * len(self.params) * len(self.algorithms)
         cur = 1
 
-        schedules_graphic = []
-        self.time_boxplot.start_row('Runtime [s]', 2)
-
         for n, m in self.params:
-            self.approx_boxplot.start_row(f'({n}, {m})', 2)
             inputs = [get_instance(self.simulation_input, m=m, n=n) for _ in range(self.reps)]
             for alg, name in self.algorithms:
                 for inp in inputs:
@@ -664,21 +659,8 @@ class SimulationRunner:
                     cur += 1
                     self.handle_input(alg, name, inp, check_assertions)
 
-            for bounds, bounds_titles, ref, instance in inputs:
-                for bound, bound_title in zip(bounds, bounds_titles):
-                    self.approx_boxplot.add_result(bound_title, bound / ref)
             self.approx_boxplot.add_boxplot()
             self.time_boxplot.add_boxplot()
 
-            self.approx_boxplot.end_row()
-            approx_latex = self.approx_boxplot.end()
-            self.approx_boxplot.start_row('', 2)
-
-        self.time_boxplot.end_row()
-        time_latex = self.time_boxplot.end()
-        for name, slide in schedules_graphic:
-            time_latex += f'\n\n{name}'
-
-        print('Generating latex files...')
-        print_latex(approx_latex, filename=f'{self.output_prefix}_approx')
-        print_latex(time_latex, filename=f'{self.output_prefix}_runtime')
+            print_latex(self.approx_boxplot.end(), dir=self.output_dir, filename=f'approx_{n}_{m}')
+            print_latex(self.time_boxplot.end(), dir=self.output_dir, filename=f'runtime_{n}_{m}')

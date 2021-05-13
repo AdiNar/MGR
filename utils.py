@@ -1,9 +1,7 @@
 import os
 
 
-def print_latex(result, filename='result'):
-    result = result.replace('\\begin{frame}', '').replace('\\end{frame}', '')
-
+def print_latex(result, dir, filename):
     full_code = f'''
     %!TEX program = pdflatex
 \\documentclass[crop,tikz]{{standalone}}
@@ -13,8 +11,9 @@ def print_latex(result, filename='result'):
 {result}
 \\end{{document}}'''
 
-    with open(f'{filename}.tex', 'w+') as file:
+    os.makedirs(dir, exist_ok=True)
+    with open(f'{dir}/{filename}.tex', 'w+') as file:
         file.write(full_code)
-    os.system(f'pdflatex {filename}.tex 1>/dev/null')
-    os.system(f'rm {filename}.aux')
-    os.system(f'rm {filename}.log')
+    os.system(f'cd {dir}; pdflatex {filename}.tex 1>/dev/null')
+    os.system(f'rm {dir}/{filename}.aux')
+    os.system(f'rm {dir}/{filename}.log')
