@@ -3,7 +3,7 @@ from simulator import Instance, JobSet, Scheduler
 
 
 class ApAlg(Scheduler):
-    def run(self, check_assertions=False):
+    def run(self,  start_at=0, check_assertions=False):
         schedule, instance = self.schedule, self.instance
         jobs = instance.jobs
         m = instance.machines_count
@@ -76,8 +76,8 @@ class ApAlg(Scheduler):
 
 
 class ApAlgS(ApAlg):
-    def run(self, check_assertions=False):
-        schedule = super().run(check_assertions)
+    def run(self,  start_at=0, check_assertions=False):
+        schedule = super().run(check_assertions=check_assertions)
         schedule.generate_resource_consumption_array()
         jobs = sorted(self.instance.jobs.jobs, key=lambda x: x.S)
 
@@ -91,7 +91,7 @@ class ApAlgH(Scheduler):
     def schedule_jobs_with_infill_guarantee(self, threshold, jobs, start_at=0):
         return self.schedule.schedule_jobs_with_infill_guarantee_heuristic(threshold, jobs, start_at)
 
-    def run(self, check_assertions=False):
+    def run(self,  start_at=0, check_assertions=False):
         schedule, instance = self.schedule, self.instance
         jobs = instance.jobs
         m = instance.machines_count

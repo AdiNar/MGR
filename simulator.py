@@ -387,7 +387,7 @@ class Scheduler:
     def _run(self, start_at=0):
         pass
 
-    def run(self, start_at=0) -> Schedule:
+    def run(self, start_at=0, check_assertions=False) -> Schedule:
         self._run(start_at=start_at)
 
         assert not self.instance.jobs.not_scheduled_jobs()
@@ -631,12 +631,11 @@ class SimulationRunner:
         self.time_boxplot = BoxBuilder()
         self.output_prefix = output_prefix
 
-    def handle_input(self, args):
-        alg, name, inp = args
+    def handle_input(self, alg, name, inp, check_assertions):
         bounds, bounds_titles, ref, instance = inp
 
         t = time()
-        schedule = alg(instance).run()
+        schedule = alg(instance).run(check_assertions=check_assertions)
 
         schedule.get_machines()
 
@@ -649,7 +648,7 @@ class SimulationRunner:
         self.time_boxplot.add_result(name, runtime)
         instance.reset()
 
-    def run(self):
+    def run(self, check_assertions):
         total = self.reps * len(self.params) * len(self.algorithms)
         cur = 1
 
@@ -663,7 +662,7 @@ class SimulationRunner:
                 for inp in inputs:
                     print(f'Proceeding {name} with params n={n}, m={m} {cur}/{total}')
                     cur += 1
-                    self.handle_input((alg, name, inp))
+                    self.handle_input(alg, name, inp, check_assertions)
 
             for bounds, bounds_titles, ref, instance in inputs:
                 for bound, bound_title in zip(bounds, bounds_titles):

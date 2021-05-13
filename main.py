@@ -28,7 +28,7 @@ def run(args):
     params = [(n, m) for n in args.jobs for m in args.machines]
 
     SimulationRunner(algorithms=algorithms, simulation_input=simulation_input, params=params, reps=args.reps,
-                     output_prefix=args.output_prefix).run()
+                     output_prefix=args.output_prefix).run(args.check_assertions)
 
 
 if __name__ == '__main__':
@@ -38,7 +38,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, help='Seed used to generate test instances. Defaults to current time.',
                         default=default_seed)
     parser.add_argument('--reps', type=int,
-                        help='Number of instances per <number of machines, number of jobs> pair every algorithm runs on.',
+                        help='Number of instances per <number of machines, number of jobs> '
+                             'pair every algorithm runs on.',
                         default=30)
     parser.add_argument('--machines', type=int, nargs='+',
                         help='Space separated list of machines number to test each algorithm on.',
@@ -49,6 +50,7 @@ if __name__ == '__main__':
     parser.add_argument('--output-prefix', type=str,
                         help='Prefix of the output files. Script will generate the following files:'
                              '<output_prefix>_{approx,runtime}.{tex,pdf}', default='results')
+    parser.add_argument('--check-assertions', action='store_true', help='Check assertions in ApAlg variations.')
 
     args = parser.parse_args()
 
