@@ -78,6 +78,7 @@ class ListScheduler(Scheduler):
 
 
 class LPT(ListScheduler):
+    """List scheduler with priorities of decreasing job processing times."""
     def _run(self, start_at=0):
         return self._list_scheduler_run(self.instance.machines_count,
                                         self.instance.jobs.by_length_descending(),
@@ -85,6 +86,7 @@ class LPT(ListScheduler):
 
 
 class HRR(ListScheduler):
+    """List scheduler with priorities of decreasing job resource requirements."""
     def _run(self, start_at=0):
         return self._list_scheduler_run(self.instance.machines_count,
                                         self.instance.jobs.by_resource_descending(),
@@ -92,6 +94,7 @@ class HRR(ListScheduler):
 
 
 class LRR(ListScheduler):
+    """List scheduler with priorities of increasing job resource requirements."""
     def _run(self, start_at=0):
         return self._list_scheduler_run(self.instance.machines_count,
                                         self.instance.jobs.by_resource_ascending(),
@@ -99,6 +102,7 @@ class LRR(ListScheduler):
 
 
 class RAND(ListScheduler):
+    """List scheduler with random priorities."""
     def _run(self, start_at=0):
         jobs = list(self.instance.jobs.jobs)[:]
         random.shuffle(jobs)
