@@ -16,10 +16,10 @@ class SimulationInput:
 
 
 class Dist(SimulationInput):
-    def __init__(self, filename):
+    def __init__(self, filename, outliers_percent):
         self.pairs = self.parse_pairs(filename)
 
-        outliers = len(self.pairs) // 100
+        outliers = int(len(self.pairs) * (outliers_percent / 100))
         to_delete_p = self.get_processing_time_outliers(outliers)
         to_delete_r = self.get_resource_outliers(outliers)
 

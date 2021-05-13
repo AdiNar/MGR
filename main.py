@@ -29,8 +29,15 @@ def positive_int(value):
 
 def algorithm_name(value):
     if value not in algorithms_dict.keys():
-        print(f'Invalid algorithm name: {value}. Must be one of {list(algorithms_dict.keys())}')
+        raise argparse.ArgumentTypeError(
+            f'Algorithm name expected, got {value}. Must be one of {list(algorithms_dict.keys())}')
     return value
+
+
+def percent(value):
+    fvalue = float(value)
+    if fvalue > 100 or fvalue < 0:
+        raise argparse.ArgumentTypeError(f'Percent value expected, got {value}')
 
 
 def run(args):
@@ -39,7 +46,7 @@ def run(args):
 
     algorithms = list(map(lambda x: (algorithms_dict[x], x), args.algorithms))
 
-    simulation_input = Dist('logs_zapat')
+    simulation_input = Dist('logs_zapat', args.outliers_percent)
 
     params = [(n, m) for n in args.jobs for m in args.machines]
 
@@ -60,7 +67,7 @@ if __name__ == '__main__':
                         default=default_seed)
     parser.add_argument('--reps', type=positive_int,
                         help='Number of instances per <number of machines, number of jobs> '
-                             'pair every algorithm runs on. Defaults to %(default)s.',
+                             'pair every algorithm runs on. Defaults to %(default)d.',
                         default=30)
     parser.add_argument('--machines', type=positive_int, nargs='+',
                         help='Space separated list of machines number to test each algorithm on. '
@@ -78,6 +85,9 @@ if __name__ == '__main__':
                         help='Choose which algorithms to compare in a space separated list. '
                              'Possible values are: %(default)s. '
                              'By default all algorithms are compared.', default=list(algorithms_dict.keys()))
+    parser.add_argument('--outliers-percent', type=percent, default=1,
+                        help='Percentage of largest values in both axis of input distribution that will be rejected. '
+                             'Defaults to %(default)d.')
 
     args = parser.parse_args()
 
