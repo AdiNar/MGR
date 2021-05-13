@@ -146,6 +146,7 @@ class Instance:
     def reset(self):
         self.jobs.unschedule()
 
+
 class Machine:
     def __init__(self, i):
         self.i = i
@@ -212,6 +213,9 @@ class OrderedSet:
 
 
 class IntervalTreeSchedule(Schedule):
+    """Default class for schedule. Schedules jobs using interval tree.
+    Assumes that if resource is available at `t`, it is also available at `t' > t`, which is enough for base case.
+    Most frequent calls work in time O(1) or O(log n)."""
     def __init__(self, machines_count):
         super().__init__(machines_count)
         self.tree = IntervalTree()
@@ -371,13 +375,14 @@ class IntervalTreeSchedule(Schedule):
         self.tree.removei(j.S, j.C, j)
 
     def generate_resource_consumption_array(self):
-        self.resource_cautious_schedule.generate_resource_consumption_array()
+        self.resource_cautious_schedule.generate_resource_consumption_map()
 
     def fit_in_first_place(self, j):
         self.resource_cautious_schedule.fit_in_first_place(j)
 
 
 class Scheduler:
+    """Schedules job from $instance into $schedule."""
     def __init__(self, instance, schedule=None):
         self.instance = instance
         if not schedule:
@@ -395,6 +400,7 @@ class Scheduler:
 
 
 class LinkedList:
+    """LinkedList with reference count. Assertions require it to be sorted by `t` param."""
     def __init__(self, t, val, refs):
         assert refs >= 0
         self.t = t
@@ -462,7 +468,9 @@ class ResourceCautiousSchedule:
         self.action_points = set()
         self.action_points_list_map = {}
 
-    def generate_resource_consumption_array(self):
+    def generate_resource_consumption_map(self):
+        """Generates LinkedList of resource usage. Stores result in `self.action_points_list_map`, which maps
+        moments in time to their respective LinkedList element."""
         self.init_action_points()
 
         tmp_array = len(self.action_points) * [Decimal(0)]
@@ -497,6 +505,7 @@ class ResourceCautiousSchedule:
             self.action_points.add(e)
 
     def fit_in_first_place(self, j: Job):
+        """Reschedule job in the first place so that the schedule will be feasible."""
         head = self.action_points_list_map[0]
 
         self.unschedule_job_from_list(head, j)
@@ -541,6 +550,8 @@ class ResourceCautiousSchedule:
 
 
 def get_instance(simulation_input: SimulationInput, m, n):
+    """Generates input with $n jobs, created from $simulation_input distribution.
+    $m is provided as some distributions may adjust result based on machine number."""
     generate = True
     while generate:
         simulation_input.prepare(n, m)
@@ -555,6 +566,7 @@ def get_instance(simulation_input: SimulationInput, m, n):
 
 
 class BoxBuilder:
+    """Generates latex string with boxplot based on provided pairs of (algorithm name, value)."""
     def __init__(self):
         self.content = ''
         self.raw_content = []
@@ -620,8 +632,7 @@ class BoxBuilder:
 
 class SimulationRunner:
     def __init__(self, algorithms: List[Tuple[Schedule, str]], simulation_input: SimulationInput,
-                 params: List[Tuple[int, int]],
-                 reps: int, output_dir: str):
+                 params: List[Tuple[int, int]], reps: int, output_dir: str):
         self.algorithms = algorithms
         self.simulation_input = simulation_input
         self.params = params
