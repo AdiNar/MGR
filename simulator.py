@@ -374,7 +374,7 @@ class IntervalTreeSchedule(Schedule):
     def unschedule(self, j: Job):
         self.tree.removei(j.S, j.C, j)
 
-    def generate_resource_consumption_array(self):
+    def generate_resource_consumption_map(self):
         self.resource_cautious_schedule.generate_resource_consumption_map()
 
     def fit_in_first_place(self, j):

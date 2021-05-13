@@ -78,7 +78,7 @@ class ApAlg(Scheduler):
 class ApAlgS(ApAlg):
     def run(self,  start_at=0, check_assertions=False):
         schedule = super().run(check_assertions=check_assertions)
-        schedule.generate_resource_consumption_array()
+        schedule.generate_resource_consumption_map()
         jobs = sorted(self.instance.jobs.jobs, key=lambda x: x.S)
 
         for j in jobs:
