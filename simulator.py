@@ -569,14 +569,10 @@ class BoxBuilder:
     """Generates latex string with boxplot based on provided pairs of (algorithm name, value)."""
     def __init__(self):
         self.content = ''
-        self.raw_content = []
         self.titles = []
         self.results = defaultdict(list)
 
     def end(self):
-        for box in self.raw_content:
-            self.content += box
-
         return self.content
 
     def add_title(self, title):
@@ -614,7 +610,7 @@ class BoxBuilder:
             }},
             ] coordinates {{}};""")
 
-        self.raw_content.append(f"""
+        self.content = f"""
     \\begin{{tikzpicture}}
       \\begin{{axis}}
         [
@@ -625,7 +621,7 @@ class BoxBuilder:
         ]
         {' '.join(boxes)}
       \\end{{axis}}
-    \\end{{tikzpicture}}""")
+    \\end{{tikzpicture}}"""
 
         self.results.clear()
 
